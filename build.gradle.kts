@@ -13,8 +13,18 @@ repositories {
 java {
     withJavadocJar()
     withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_1_9
-    targetCompatibility = JavaVersion.VERSION_1_9
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+sourceSets {
+    create("simd") {
+        java {
+            srcDir("src/simd/java")
+        }
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
+    }
 }
 
 publishing {
@@ -41,7 +51,21 @@ tasks {
         targetCompatibility = "1.8"
     }
 
+    val compileSimd by creating(JavaCompile::class) {
+        source = sourceSets["simd"].java
+        classpath = sourceSets["simd"].compileClasspath
+        destinationDirectory.set(file("$buildDir/classes/java/simd"))
+        options.release.set(17)
+        options.compilerArgs.addAll(listOf("--add-modules", "jdk.incubator.vector"));
+    }
+
     javadoc {
+        dependsOn(compileSimd)
         (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:all,-missing", "-quiet")
+    }
+
+    jar {
+        from(sourceSets["simd"].output)
+        dependsOn(compileSimd)
     }
 }
