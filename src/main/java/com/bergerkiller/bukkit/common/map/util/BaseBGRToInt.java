@@ -18,6 +18,6 @@ class BaseBGRToInt implements RGBColorToIntConversion {
 
     @Override
     public int singleIntToInt(int input) {
-        return input;
+        return input & 0xFFFFFF;
     }
 }

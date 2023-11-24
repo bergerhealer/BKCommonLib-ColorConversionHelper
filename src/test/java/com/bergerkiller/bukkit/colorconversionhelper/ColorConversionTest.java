@@ -41,6 +41,23 @@ public class ColorConversionTest {
     public void testColorConversion(TestImage.ConvertMode convertMode, TestImage.Type type, String imageName) {
         TestImage.load(imageName, type)
                 .convert(convertMode)
-                .assertCorrect(TestImage.DebugMode.SHOW_IMAGE_ON_FAILURE);
+                .assertCorrect(TestImage.DebugMode.DEFAULT);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            // Base operations
+            "BASE,  INT_RGB",
+            "BASE,  INT_BGR",
+
+            // SIMD optimizations (if supported on testing machine)
+            "SIMD,  INT_RGB",
+            "SIMD,  INT_BGR",
+    })
+    public void testRGBUnusedChannelRejection(TestImage.ConvertMode convertMode, TestImage.Type type) {
+        TestImage.loadInt("test_minecraft.jpg", type)
+                .garbageAlpha()
+                .convert(convertMode)
+                .assertCorrect(TestImage.DebugMode.DEFAULT);
     }
 }

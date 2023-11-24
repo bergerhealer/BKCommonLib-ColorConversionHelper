@@ -22,6 +22,7 @@ public abstract class TestImage<D extends java.awt.image.DataBuffer> {
     public final int height;
     public final int[] truth;
     public final int[] result;
+    public final byte[] mapResult;
     protected final D imageBuffer;
     protected ConvertMode lastUsedConversionMode;
 
@@ -63,20 +64,20 @@ public abstract class TestImage<D extends java.awt.image.DataBuffer> {
         width = inputImage.getWidth(null);
         height = inputImage.getHeight(null);
 
+        // Encode a raw data buffer in the image format we desire
+        BufferedImage image;
+        {
+            image = new BufferedImage(width, height, type.bufferedImageType);
+            Graphics2D g = image.createGraphics();
+            g.drawImage(inputImage, 0, 0, null);
+            g.dispose();
+        }
+        this.imageBuffer = dataBufferType.cast(image.getRaster().getDataBuffer());
+
         // Decode truth int rgb pixels that our conversion methods should replicate
         {
-            BufferedImage imageBuf;
-            if (inputImage instanceof BufferedImage) {
-                imageBuf = (BufferedImage) inputImage;
-            } else {
-                imageBuf = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                java.awt.Graphics2D graphics = imageBuf.createGraphics();
-                graphics.drawImage(inputImage, 0, 0, null);
-                graphics.dispose();
-            }
-
             int[] intPixels = new int[width * height];
-            imageBuf.getRGB(0, 0, width, height, intPixels, 0, width);
+            image.getRGB(0, 0, width, height, intPixels, 0, width);
 
             // Convert this ARGB color format to the RGBA format that we expect for output
             for (int i = 0; i < intPixels.length; i++) {
@@ -93,20 +94,8 @@ public abstract class TestImage<D extends java.awt.image.DataBuffer> {
             }
 
             this.truth = intPixels;
-            this.result = new int[intPixels.length]; // Initialized up-front with all 0
-        }
-
-        // Encode a raw data buffer in the image format we desire
-        {
-            BufferedImage image;
-            {
-                image = new BufferedImage(width, height, type.bufferedImageType);
-                Graphics2D g = image.createGraphics();
-                g.drawImage(inputImage, 0, 0, null);
-                g.dispose();
-            }
-
-            this.imageBuffer = dataBufferType.cast(image.getRaster().getDataBuffer());
+            this.result = new int[intPixels.length];
+            this.mapResult = new byte[intPixels.length];
         }
     }
 
@@ -139,6 +128,21 @@ public abstract class TestImage<D extends java.awt.image.DataBuffer> {
             }
         }
         return this;
+    }
+
+    public TestImage<D> benchmarkPrime(ConvertMode mode, int cycleCount) {
+        benchmark(mode, cycleCount);
+        return this;
+    }
+
+    public double benchmark(ConvertMode mode, int cycleCount) {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < cycleCount; i++) {
+            convert(mode);
+        }
+        long end = System.currentTimeMillis();
+
+        return 1.0 / ((double) (end - start) / cycleCount / 1000.0);
     }
 
     /**
@@ -184,7 +188,12 @@ public abstract class TestImage<D extends java.awt.image.DataBuffer> {
         @Override
         public TestImageByte convert(ConvertMode mode) {
             lastUsedConversionMode = mode;
-            type.conversion(mode).byteBufferToIntRGB(data, result.length, result);
+            new RGBColorToIntConversion.Decoder(type.conversion(mode)) {
+                @Override
+                public void onPixel(int index, int rgba) {
+                    result[index] = rgba;
+                }
+            }.decode(data, result.length);
             return this;
         }
 
@@ -208,10 +217,29 @@ public abstract class TestImage<D extends java.awt.image.DataBuffer> {
             type.intCorrection.accept(this.data);
         }
 
+        /**
+         * Inserts garbage alpha channel values to the RGB int {@link #data}.
+         * This simulates garbage info in the unused channel.
+         *
+         * @return this image
+         */
+        public TestImageInt garbageAlpha() {
+            for (int i = 0; i < data.length; i++) {
+                // Set unused channel to 0-255 repeating
+                data[i] = (data[i] & 0xFFFFFF) | (i & 0xFF) << 24;
+            }
+            return this;
+        }
+
         @Override
         public TestImageInt convert(ConvertMode mode) {
             lastUsedConversionMode = mode;
-            type.conversion(mode).intBufferToIntRGB(data, result.length, result);
+            new RGBColorToIntConversion.Decoder(type.conversion(mode)) {
+                @Override
+                public void onPixel(int index, int rgba) {
+                    result[index] = rgba;
+                }
+            }.decode(data, result.length);
             return this;
         }
 

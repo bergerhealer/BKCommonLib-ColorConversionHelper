@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.bergerkiller.bukkit.colorconversionhelper"
-version = "1.02"
+version = "1.03"
 
 repositories {
     mavenCentral()
@@ -26,6 +26,8 @@ dependencies {
 sourceSets {
     create("simd") {
         java.srcDir("src/simd/java")
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
     }
 }
 

@@ -1,6 +1,7 @@
 package com.bergerkiller.bukkit.common.map.util;
 
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 /**
  * Helper math routines for converting byte[] and int[] RGB(A) pixel data into
@@ -121,159 +122,38 @@ public interface RGBColorToIntConversion {
         return inputOffset;
     }
 
-
-    default void decodeIntBuffer(int[] intPixels, int pixelCount, RGBColorConsumer consumer) {
-        int intPosition = 0;
-        int pixelPosition = 0;
-
-        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
-        // This is a little more performant, especially with SIMD enabled
-        {
-            int[] buff = new int[32];
-            int maxStartIntPosition = pixelCount - 32;
-            while (intPosition < maxStartIntPosition) {
-                intPosition = intBlockConvert32Pixels(intPixels, intPosition, buff);
-                for (int i = 0; i < 32; i++) {
-                    consumer.accept(pixelPosition++, buff[i]);
-                }
+    /**
+     * Decodes int-encoded pixel data
+     *
+     * @param data Pixel data
+     * @param pixelCount Pixel count
+     * @param consumer Consumer callback to call for every pixel
+     * @see Decoder
+     */
+    default void decode(int[] data, int pixelCount, RGBColorConsumer consumer) {
+        new Decoder(this) {
+            @Override
+            public void onPixel(int index, int rgba) {
+                consumer.onPixel(index, rgba);
             }
-        }
-
-        // Perform a simple for loop for the remaining bytes
-        while (intPosition < pixelCount) {
-            consumer.accept(pixelPosition++, singleIntToInt(intPixels[intPosition]));
-            intPosition++;
-        }
+        }.decode(data, pixelCount);
     }
 
-    default void decodeByteBuffer(byte[] bytePixels, int pixelCount, RGBColorConsumer consumer) {
-        int bytePosition = 0;
-        int pixelPosition = 0;
-
-        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
-        // This is a little more performant, especially with SIMD enabled
-        {
-            int[] buff = new int[32];
-            int maxStartBytePosition = (pixelCount * singleBytesInputLength()) - byteBlockInputMinimumLength();
-            while (bytePosition < maxStartBytePosition) {
-                bytePosition = byteBlockConvert32Pixels(bytePixels, bytePosition, buff);
-                for (int i = 0; i < 32; i++) {
-                    consumer.accept(pixelPosition++, buff[i]);
-                }
+    /**
+     * Decodes byte-encoded pixel data
+     *
+     * @param data Pixel data
+     * @param pixelCount Pixel count
+     * @param consumer Consumer callback to call for every pixel
+     * @see Decoder
+     */
+    default void decode(byte[] data, int pixelCount, RGBColorConsumer consumer) {
+        new Decoder(this) {
+            @Override
+            public void onPixel(int index, int rgba) {
+                consumer.onPixel(index, rgba);
             }
-        }
-
-        // Perform a simple for loop for the remaining bytes
-        int step = singleBytesInputLength();
-        int limit = pixelCount * step;
-        while (bytePosition < limit) {
-            consumer.accept(pixelPosition++, singleBytesToInt(bytePixels, bytePosition));
-            bytePosition += step;
-        }
-    }
-
-
-
-    default void intBufferToIntRGB(int[] intPixels, int pixelCount, int[] result) {
-        int intPosition = 0;
-        int pixelPosition = 0;
-
-        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
-        // This is a little more performant, especially with SIMD enabled
-        {
-            int[] buff = new int[32];
-            int maxStartIntPosition = pixelCount - 32;
-            while (intPosition < maxStartIntPosition) {
-                intPosition = intBlockConvert32Pixels(intPixels, intPosition, buff);
-                for (int i = 0; i < 32; i++) {
-                    result[pixelPosition++] = buff[i];
-                }
-            }
-        }
-
-        // Perform a simple for loop for the remaining bytes
-        while (intPosition < pixelCount) {
-            result[pixelPosition++] = singleIntToInt(intPixels[intPosition]);
-            intPosition++;
-        }
-    }
-
-    default void byteBufferToIntRGB(byte[] bytePixels, int pixelCount, int[] result) {
-        int bytePosition = 0;
-        int pixelPosition = 0;
-
-        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
-        // This is a little more performant, especially with SIMD enabled
-        {
-            int[] buff = new int[32];
-            int maxStartBytePosition = (pixelCount * singleBytesInputLength()) - byteBlockInputMinimumLength();
-            while (bytePosition < maxStartBytePosition) {
-                bytePosition = byteBlockConvert32Pixels(bytePixels, bytePosition, buff);
-                for (int i = 0; i < 32; i++) {
-                    result[pixelPosition++] = buff[i];
-                }
-            }
-        }
-
-        // Perform a simple for loop for the remaining bytes
-        int step = singleBytesInputLength();
-        while (pixelPosition < pixelCount) {
-            result[pixelPosition] = singleBytesToInt(bytePixels, bytePosition);
-            pixelPosition++;
-            bytePosition += step;
-        }
-    }
-
-    // Probably to be removed
-    default void byteBufferToMapColors(byte[] bytePixels, int pixelCount, RGBToMapColorFunction converter, byte[] result) {
-        int bytePosition = 0;
-        int pixelPosition = 0;
-
-        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
-        // This is a little more performant, especially with SIMD enabled
-        {
-            int[] buff = new int[32];
-            int maxStartBytePosition = (pixelCount * singleBytesInputLength()) - byteBlockInputMinimumLength();
-            while (bytePosition < maxStartBytePosition) {
-                bytePosition = byteBlockConvert32Pixels(bytePixels, bytePosition, buff);
-                for (int i = 0; i < 32; i++) {
-                    result[pixelPosition++] = converter.toMapColor(buff[i]);
-                }
-            }
-        }
-
-        // Perform a simple for loop for the remaining bytes
-        int step = singleBytesInputLength();
-        int limit = pixelCount * step;
-        while (bytePosition < limit) {
-            result[pixelPosition++] = converter.toMapColor(singleBytesToInt(bytePixels, bytePosition));
-            bytePosition += step;
-        }
-    }
-
-    // Probably to be removed
-    default void intBufferToMapColors(int[] intPixels, int pixelCount, RGBToMapColorFunction converter, byte[] result) {
-        int intPosition = 0;
-        int pixelPosition = 0;
-
-        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
-        // This is a little more performant, especially with SIMD enabled
-        {
-            int[] buff = new int[32];
-            int maxStartIntPosition = pixelCount - 32;
-            while (intPosition < maxStartIntPosition) {
-                intPosition = intBlockConvert32Pixels(intPixels, intPosition, buff);
-                for (int i = 0; i < 32; i++) {
-                    result[pixelPosition++] = converter.toMapColor(buff[i]);
-                }
-            }
-        }
-
-        // Perform a simple for loop for the remaining bytes
-        while (intPosition < pixelCount) {
-            result[pixelPosition++] = converter.toMapColor(singleIntToInt(intPixels[intPosition]));
-            intPosition++;
-        }
+        }.decode(data, pixelCount);
     }
 
     /**
@@ -327,16 +207,164 @@ public interface RGBColorToIntConversion {
         }
     }
 
+    /**
+     * Consumes pixel RGB(A) values
+     */
     @FunctionalInterface
     interface RGBColorConsumer {
-        void accept(int pixelIndex, int rgb);
+        /**
+         * Callback called for every pixel encountered
+         *
+         * @param index Index of the pixel
+         * @param rgba Red green blue alpha component. For RGB data, the alpha
+         *             channel is kept 0.
+         */
+        void onPixel(int index, int rgba);
     }
 
     /**
-     * Maps RGB colors to byte Minecraft map colors
+     * Decodes int[] or byte[] data, calling the callback with every pixel encountered.
+     * Callback is called on multiple threads by default.
      */
-    @FunctionalInterface
-    interface RGBToMapColorFunction {
-        byte toMapColor(int rgb);
+    abstract class Decoder implements RGBColorConsumer {
+        private final RGBColorToIntConversion converter;
+        private int parallelism;
+
+        public Decoder(RGBColorToIntConversion converter) {
+            this.converter = converter;
+            this.parallelism = Runtime.getRuntime().availableProcessors();
+        }
+
+        /**
+         * Sets over how many parallel threads the decoding is performed. If set to 1 or less,
+         * this decoder runs single-threaded. If more than 1, {@link #onPixel(int, int)} will be
+         * called on multiple (worker) threads.
+         * Is by default set to the number of cpu threads.
+         *
+         * @param parallelism Number of parallel tasks to decode on
+         * @return this decoder
+         */
+        public Decoder parallelism(int parallelism) {
+            this.parallelism = parallelism;
+            return this;
+        }
+
+        private int computeParallelism(int pixelCount) {
+            // Try to have at least 4 blocks processed per thread
+            return Math.min(this.parallelism, pixelCount / (32 * 4));
+        }
+
+        /**
+         * Decodes byte-encoded pixel data.
+         *
+         * @param data Pixel data, with 3 or 4 bytes per pixel storing the RGB(A) values
+         * @param pixelCount Total number of pixels to decode
+         */
+        public void decode(byte[] data, int pixelCount) {
+            int bytePosition = 0;
+            int pixelPosition = 0;
+
+            // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
+            // This is a little more performant, especially with SIMD enabled
+            {
+                final int totalBytes = pixelCount * converter.singleBytesInputLength() - converter.byteBlockInputMinimumLength();
+                final int parallelism = computeParallelism(pixelCount);
+
+                if (parallelism > 1) {
+                    final int blocksPerThread = (totalBytes / (parallelism * converter.byteBlockInputLength()));
+                    final int bytesPerThread = converter.byteBlockInputLength() * blocksPerThread;
+                    final int pixelsPerThread = 32 * blocksPerThread;
+
+                    IntStream.range(0, parallelism)
+                            .parallel()
+                            .forEach(threadId -> {
+                                int threadBytePosition = threadId * bytesPerThread;
+                                int threadEndPosition = threadBytePosition + bytesPerThread;
+                                int threadPixelPosition = threadId * pixelsPerThread;
+                                int[] buff = new int[32];
+                                while (threadBytePosition < threadEndPosition) {
+                                    threadBytePosition = converter.byteBlockConvert32Pixels(data, threadBytePosition, buff);
+                                    for (int i = 0; i < 32; i++) {
+                                        onPixel(threadPixelPosition++, buff[i]);
+                                    }
+                                }
+                            });
+
+                    bytePosition += parallelism * bytesPerThread;
+                    pixelPosition += parallelism * pixelsPerThread;
+                } else {
+                    int[] buff = new int[32];
+                    while (bytePosition < totalBytes) {
+                        bytePosition = converter.byteBlockConvert32Pixels(data, bytePosition, buff);
+                        for (int i = 0; i < 32; i++) {
+                            onPixel(pixelPosition++, buff[i]);
+                        }
+                    }
+                }
+            }
+
+            // Perform a simple for loop for the few remaining pixels
+            int step = converter.singleBytesInputLength();
+            int limit = pixelCount * step;
+            while (bytePosition < limit) {
+                onPixel(pixelPosition++, converter.singleBytesToInt(data, bytePosition));
+                bytePosition += step;
+            }
+        }
+
+        /**
+         * Decodes int-encoded pixel data.
+         *
+         * @param data Pixel data, with an int per pixel storing the RGB(A) values
+         * @param pixelCount Total number of pixels to decode
+         */
+        public void decode(int[] data, int pixelCount) {
+            int intPosition = 0;
+            int pixelPosition = 0;
+
+            // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
+            // This is a little more performant, especially with SIMD enabled
+            {
+                final int totalIntegers = pixelCount - 32;
+                final int parallelism = computeParallelism(pixelCount);
+
+                if (parallelism > 1) {
+                    final int blocksPerThread = (totalIntegers / (parallelism * 32));
+                    final int pixelsPerThread = 32 * blocksPerThread;
+
+                    IntStream.range(0, parallelism)
+                            .parallel()
+                            .forEach(threadId -> {
+                                int threadIntPosition = threadId * pixelsPerThread;
+                                int threadEndPosition = threadIntPosition + pixelsPerThread;
+                                int threadPixelPosition = threadId * pixelsPerThread;
+                                int[] buff = new int[32];
+                                while (threadIntPosition < threadEndPosition) {
+                                    threadIntPosition = converter.intBlockConvert32Pixels(data, threadIntPosition, buff);
+                                    for (int i = 0; i < 32; i++) {
+                                        onPixel(threadPixelPosition++, buff[i]);
+                                    }
+                                }
+                            });
+
+                    intPosition += parallelism * pixelsPerThread;
+                    pixelPosition += parallelism * pixelsPerThread;
+                } else {
+                    int[] buff = new int[32];
+                    while (intPosition < totalIntegers) {
+                        intPosition = converter.intBlockConvert32Pixels(data, intPosition, buff);
+                        for (int i = 0; i < 32; i++) {
+                            onPixel(pixelPosition++, buff[i]);
+                        }
+                    }
+                }
+            }
+
+            // Perform a simple for loop for the few remaining pixels
+            while (intPosition < pixelCount) {
+                onPixel(pixelPosition++, converter.singleIntToInt(data[intPosition]));
+                intPosition++;
+            }
+        }
     }
 }

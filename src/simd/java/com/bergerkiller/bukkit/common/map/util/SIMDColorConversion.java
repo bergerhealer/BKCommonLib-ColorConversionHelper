@@ -197,9 +197,9 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                     for (int i = 0; i < 16; i++) {
                         IntVector.fromArray(intSpecies, input, inputOffset)
                                 .reinterpretAsBytes()
+                                .withLane(7, (byte) 0)
                                 .rearrange(intShuffle)
                                 .reinterpretAsInts()
-                                .and(0xFFFFFF)
                                 .intoArray(buffer, i * 2);
                         inputOffset += 2;
                     }
@@ -227,9 +227,9 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                     for (int i = 0; i < 8; i++) {
                         IntVector.fromArray(intSpecies, input, inputOffset)
                                 .reinterpretAsBytes()
+                                .withLane(15, (byte) 0)
                                 .rearrange(intShuffle)
                                 .reinterpretAsInts()
-                                .and(0xFFFFFF)
                                 .intoArray(buffer, i * 4);
                         inputOffset += 4;
                     }
@@ -257,9 +257,9 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                     for (int i = 0; i < 2; i++) {
                         IntVector.fromArray(intSpecies, input, inputOffset)
                                 .reinterpretAsBytes()
+                                .withLane(63, (byte) 0)
                                 .rearrange(intShuffle)
                                 .reinterpretAsInts()
-                                .and(0xFFFFFF)
                                 .intoArray(buffer, i * 16);
                         inputOffset += 16;
                     }
@@ -283,9 +283,9 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                 public int intBlockConvert32Pixels(int[] input, int inputOffset, int[] buffer) {
                     IntVector.fromArray(intSpecies, input, inputOffset)
                             .reinterpretAsBytes()
+                            .withLane(127, (byte) 0)
                             .rearrange(intShuffle)
                             .reinterpretAsInts()
-                            .and(0xFFFFFF)
                             .intoArray(buffer, 0);
                     return inputOffset + 32;
                 }
@@ -311,9 +311,9 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                     for (int i = 0; i < 4; i++) {
                         IntVector.fromArray(intSpecies, input, inputOffset)
                                 .reinterpretAsBytes()
+                                .withLane(31, (byte) 0)
                                 .rearrange(intShuffle)
                                 .reinterpretAsInts()
-                                .and(0xFFFFFF)
                                 .intoArray(buffer, i * 8);
                         inputOffset += 8;
                     }
@@ -358,7 +358,11 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                 shuffleInts[i++] = ctr + int_rgb[0];
                 shuffleInts[i++] = ctr + int_rgb[1];
                 shuffleInts[i++] = ctr + int_rgb[2];
-                shuffleInts[i++] = ctr + int_rgb[3]; // Transparency is always stored in an int...
+                if (hasTransparency) {
+                    shuffleInts[i++] = ctr + int_rgb[3];
+                } else {
+                    shuffleInts[i++] = length - 1;
+                }
                 ctr += 4;
             }
             this.intShuffle = VectorShuffle.fromArray(species, shuffleInts, 0);
