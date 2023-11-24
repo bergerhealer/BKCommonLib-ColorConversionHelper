@@ -26,11 +26,11 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
     }
 
     public static RGBColorToIntConversion abgr() {
-        return transparent(new BaseBGRToInt(), new int[] {3, 2, 1, 0}, new int[] {0, 1, 2, 3});
+        return transparent(new BaseABGRToInt(), new int[] {3, 2, 1, 0}, new int[] {0, 1, 2, 3});
     }
 
     public static RGBColorToIntConversion argb() {
-        return transparent(new BaseRGBToInt(), new int[] {1, 2, 3, 0}, new int[] {2, 1, 0, 3});
+        return transparent(new BaseARGBToInt(), new int[] {1, 2, 3, 0}, new int[] {2, 1, 0, 3});
     }
 
     private static RGBColorToIntConversion transparent(RGBColorToIntConversion base, int[] byte_rgb, int[] int_rgb) {
@@ -363,6 +363,11 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
     @Override
     public boolean isUsingSIMD() {
         return true;
+    }
+
+    @Override
+    public RGBColorToIntConversion noSIMD() {
+        return base;
     }
 
     @Override

@@ -32,6 +32,15 @@ public interface RGBColorToIntConversion {
     }
 
     /**
+     * If this is {@link #isUsingSIMD()}, returns a conversion mode that doesn't.
+     *
+     * @return This conversion mode, but with SIMD disabled
+     */
+    default RGBColorToIntConversion noSIMD() {
+        return this;
+    }
+
+    /**
      * The number of input bytes of a single color value.
      * {@link #byteBlockInputLength()} is a multiple of this value.
      *
@@ -112,6 +121,110 @@ public interface RGBColorToIntConversion {
         return inputOffset;
     }
 
+
+    default void decodeIntBuffer(int[] intPixels, int pixelCount, RGBColorConsumer consumer) {
+        int intPosition = 0;
+        int pixelPosition = 0;
+
+        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
+        // This is a little more performant, especially with SIMD enabled
+        {
+            int[] buff = new int[32];
+            int maxStartIntPosition = pixelCount - 32;
+            while (intPosition < maxStartIntPosition) {
+                intPosition = intBlockConvert32Pixels(intPixels, intPosition, buff);
+                for (int i = 0; i < 32; i++) {
+                    consumer.accept(pixelPosition++, buff[i]);
+                }
+            }
+        }
+
+        // Perform a simple for loop for the remaining bytes
+        while (intPosition < pixelCount) {
+            consumer.accept(pixelPosition++, singleIntToInt(intPixels[intPosition]));
+            intPosition++;
+        }
+    }
+
+    default void decodeByteBuffer(byte[] bytePixels, int pixelCount, RGBColorConsumer consumer) {
+        int bytePosition = 0;
+        int pixelPosition = 0;
+
+        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
+        // This is a little more performant, especially with SIMD enabled
+        {
+            int[] buff = new int[32];
+            int maxStartBytePosition = (pixelCount * singleBytesInputLength()) - byteBlockInputMinimumLength();
+            while (bytePosition < maxStartBytePosition) {
+                bytePosition = byteBlockConvert32Pixels(bytePixels, bytePosition, buff);
+                for (int i = 0; i < 32; i++) {
+                    consumer.accept(pixelPosition++, buff[i]);
+                }
+            }
+        }
+
+        // Perform a simple for loop for the remaining bytes
+        int step = singleBytesInputLength();
+        int limit = pixelCount * step;
+        while (bytePosition < limit) {
+            consumer.accept(pixelPosition++, singleBytesToInt(bytePixels, bytePosition));
+            bytePosition += step;
+        }
+    }
+
+
+
+    default void intBufferToIntRGB(int[] intPixels, int pixelCount, int[] result) {
+        int intPosition = 0;
+        int pixelPosition = 0;
+
+        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
+        // This is a little more performant, especially with SIMD enabled
+        {
+            int[] buff = new int[32];
+            int maxStartIntPosition = pixelCount - 32;
+            while (intPosition < maxStartIntPosition) {
+                intPosition = intBlockConvert32Pixels(intPixels, intPosition, buff);
+                for (int i = 0; i < 32; i++) {
+                    result[pixelPosition++] = buff[i];
+                }
+            }
+        }
+
+        // Perform a simple for loop for the remaining bytes
+        while (intPosition < pixelCount) {
+            result[pixelPosition++] = singleIntToInt(intPixels[intPosition]);
+            intPosition++;
+        }
+    }
+
+    default void byteBufferToIntRGB(byte[] bytePixels, int pixelCount, int[] result) {
+        int bytePosition = 0;
+        int pixelPosition = 0;
+
+        // Process 32 pixel blocks of data by performing the byte[] conversion in bulk
+        // This is a little more performant, especially with SIMD enabled
+        {
+            int[] buff = new int[32];
+            int maxStartBytePosition = (pixelCount * singleBytesInputLength()) - byteBlockInputMinimumLength();
+            while (bytePosition < maxStartBytePosition) {
+                bytePosition = byteBlockConvert32Pixels(bytePixels, bytePosition, buff);
+                for (int i = 0; i < 32; i++) {
+                    result[pixelPosition++] = buff[i];
+                }
+            }
+        }
+
+        // Perform a simple for loop for the remaining bytes
+        int step = singleBytesInputLength();
+        while (pixelPosition < pixelCount) {
+            result[pixelPosition] = singleBytesToInt(bytePixels, bytePosition);
+            pixelPosition++;
+            bytePosition += step;
+        }
+    }
+
+    // Probably to be removed
     default void byteBufferToMapColors(byte[] bytePixels, int pixelCount, RGBToMapColorFunction converter, byte[] result) {
         int bytePosition = 0;
         int pixelPosition = 0;
@@ -138,6 +251,7 @@ public interface RGBColorToIntConversion {
         }
     }
 
+    // Probably to be removed
     default void intBufferToMapColors(int[] intPixels, int pixelCount, RGBToMapColorFunction converter, byte[] result) {
         int intPosition = 0;
         int pixelPosition = 0;
@@ -211,6 +325,11 @@ public interface RGBColorToIntConversion {
                 return false;
             }
         }
+    }
+
+    @FunctionalInterface
+    interface RGBColorConsumer {
+        void accept(int pixelIndex, int rgb);
     }
 
     /**
