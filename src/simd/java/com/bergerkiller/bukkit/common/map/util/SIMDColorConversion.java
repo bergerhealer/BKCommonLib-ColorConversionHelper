@@ -199,6 +199,7 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                                 .reinterpretAsBytes()
                                 .rearrange(intShuffle)
                                 .reinterpretAsInts()
+                                .and(0xFFFFFF)
                                 .intoArray(buffer, i * 2);
                         inputOffset += 2;
                     }
@@ -228,6 +229,7 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                                 .reinterpretAsBytes()
                                 .rearrange(intShuffle)
                                 .reinterpretAsInts()
+                                .and(0xFFFFFF)
                                 .intoArray(buffer, i * 4);
                         inputOffset += 4;
                     }
@@ -257,6 +259,7 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                                 .reinterpretAsBytes()
                                 .rearrange(intShuffle)
                                 .reinterpretAsInts()
+                                .and(0xFFFFFF)
                                 .intoArray(buffer, i * 16);
                         inputOffset += 16;
                     }
@@ -282,6 +285,7 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                             .reinterpretAsBytes()
                             .rearrange(intShuffle)
                             .reinterpretAsInts()
+                            .and(0xFFFFFF)
                             .intoArray(buffer, 0);
                     return inputOffset + 32;
                 }
@@ -309,6 +313,7 @@ abstract class SIMDColorConversion implements RGBColorToIntConversion {
                                 .reinterpretAsBytes()
                                 .rearrange(intShuffle)
                                 .reinterpretAsInts()
+                                .and(0xFFFFFF)
                                 .intoArray(buffer, i * 8);
                         inputOffset += 8;
                     }

@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.bergerkiller.bukkit.colorconversionhelper"
-version = "1.01"
+version = "1.02"
 
 repositories {
     mavenCentral()
