@@ -1,13 +1,19 @@
 plugins {
     id("java-library")
     id("maven-publish")
+    /* https://github.com/bergerhealer/gradle-simd-plugin */
+    id("com.bergerkiller.gradle.simd") version "1.0.0"
 }
 
 group = "com.bergerkiller.bukkit.colorconversionhelper"
-version = "1.03"
+version = "1.04"
 
 repositories {
     mavenCentral()
+}
+
+simd {
+    sourceDir.set(layout.projectDirectory.dir("src/simd/java"))
 }
 
 java {
@@ -23,22 +29,6 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }
 
-sourceSets {
-    create("simd") {
-        java.srcDir("src/simd/java")
-        compileClasspath += sourceSets["main"].output
-        runtimeClasspath += sourceSets["main"].output
-    }
-}
-
-val compileSimd by tasks.registering(JavaCompile::class) {
-    source = sourceSets["simd"].java
-    classpath = sourceSets["main"].output + sourceSets["simd"].compileClasspath
-    destinationDirectory.set(file("$buildDir/classes/java/simd"))
-    options.release.set(17)
-    options.compilerArgs.addAll(listOf("--add-modules", "jdk.incubator.vector"))
-}
-
 tasks {
     compileJava {
         sourceCompatibility = "1.8"
@@ -47,25 +37,15 @@ tasks {
 
     test {
         useJUnitPlatform()
-        dependsOn(compileSimd)
-
         testLogging {
             showStandardStreams = true
         }
-
-        classpath += files(compileSimd.get().destinationDirectory)
 
         jvmArgs("--add-modules", "jdk.incubator.vector")
     }
 
     javadoc {
-        dependsOn(compileSimd)
         (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:all,-missing", "-quiet")
-    }
-
-    jar {
-        from(sourceSets["main"].output)
-        from(compileSimd.get().outputs.files)
     }
 }
 
