@@ -1,4 +1,4 @@
-package com.bergerkiller.bukkit.colorconversionhelper.util;
+package com.bergerkiller.bukkit.common.map.util.util;
 
 import com.bergerkiller.bukkit.common.map.util.RGBColorToIntConversion;
 

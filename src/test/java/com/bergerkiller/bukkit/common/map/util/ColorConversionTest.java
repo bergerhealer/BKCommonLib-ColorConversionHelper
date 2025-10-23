@@ -1,7 +1,6 @@
-package com.bergerkiller.bukkit.colorconversionhelper;
+package com.bergerkiller.bukkit.common.map.util;
 
-import com.bergerkiller.bukkit.colorconversionhelper.util.TestImage;
-import com.bergerkiller.bukkit.common.map.util.RGBColorToIntConversion;
+import com.bergerkiller.bukkit.common.map.util.util.TestImage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
